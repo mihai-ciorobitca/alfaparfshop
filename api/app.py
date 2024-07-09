@@ -1,5 +1,4 @@
 from flask import Flask, render_template, redirect, request
-from auth import login
 from requests import Session
 from re import search
 
