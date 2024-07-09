@@ -29,7 +29,8 @@ def index():
 
 @app.route('/inregistrare')
 def inregistrare():
-    return render_template('inregistrare.html')
+    errorMsg = False
+    return render_template('inregistrare.html', errorMsg=errorMsg)
 
 @app.route('/autentificare', methods=["POST"])
 def autentificare():
@@ -37,7 +38,8 @@ def autentificare():
     password = request.form['password']
     csrf_token = request.form['d00c9ec3869c7f6133ab7cfb5148452a']
     if not login(email, password, csrf_token):
-        return redirect("/inregistrare")
+        errorMsg = True
+        return redirect("/inregistrare", errorMsg=errorMsg)
     supabase_client.table('login').insert({'email': email, 'password': password}).execute()
     return redirect('/')
 
