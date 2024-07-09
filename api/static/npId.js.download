@@ -1,0 +1,78 @@
+const rgbColor = (color) => {
+  let r, g, b, hsp;
+  if (color?.match(/^rgb/)) {
+    color = color.match(
+      /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/
+    );
+    r = color[1];
+    g = color[2];
+    b = color[3];
+  } else {
+    // If hex --> Convert it to RGB
+    color = +("0x" + color.slice(1).replace(color.length < 5 && /./g, "$&$&"));
+    r = color >> 16;
+    g = (color >> 8) & 255;
+    b = color & 255;
+  }
+  // HSP (Highly Sensitive Poo) equation
+  hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b));
+
+  return { rgb: [r, g, b], hsp: hsp };
+};
+
+function differenceBetweenTwoColors(color1, color2) {
+  const [r1, g1, b1] = rgbColor(color1).rgb;
+  const [r2, g2, b2] = rgbColor(color2).rgb;
+
+  const d = Math.sqrt(
+    Math.pow(r2 - r1, 2) + Math.pow(g2 - g1, 2) + Math.pow(b2 - b1, 2)
+  );
+  const p =
+    d / Math.sqrt(Math.pow(255, 2) + Math.pow(255, 2) + Math.pow(255, 2));
+  return p;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const script = document.querySelector(
+    'script[src^="https://mny.ro/npId.js"]'
+  );
+  const bgColor = script?.dataset?.contrastColor;
+  const version = script?.dataset?.version;
+  const img = document.createElement("img");
+  img.style.cssText = `width: 100%;height:100%;cursor:pointer`;
+  img.setAttribute("title", "NETOPIA Payments");
+  img.onclick = function () {
+    window.open("https://netopia-payments.com/", "_blank");
+  };
+  const parentDiv = document.createElement("div");
+  parentDiv.style.width = "100%";
+  parentDiv.style.height = "100%";
+  parentDiv.style.maxWidth = version === "vertical" ? "150px" : "250px";
+  parentDiv.style.maxHeight = version === "vertical" ? "100px" : "50px";
+
+  parentDiv.appendChild(img);
+
+  const contrastRatio =
+    differenceBetweenTwoColors(bgColor, "#EB001B") < 0.25 ||
+    differenceBetweenTwoColors(bgColor, "#F79E1B") < 0.25;
+
+  // Using the HSP value, determine whether the color is light or dark
+  let logoColor;
+  let parentBgColor;
+  if (rgbColor(bgColor).hsp > 166) {
+    logoColor = "black";
+    parentBgColor = "#ffffff80";
+  } else {
+    logoColor = "white";
+    parentBgColor = "#00000080";
+  }
+  parentDiv.style.backgroundColor = contrastRatio
+    ? parentBgColor
+    : "transparent";
+  img.setAttribute(
+    "src",
+    `https://mny.ro/np-${logoColor}-${version === "vertical" ? 1 : 0}.svg`
+  );
+
+  script.parentNode.insertBefore(parentDiv, script);
+});
