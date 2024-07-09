@@ -1,6 +1,5 @@
 from flask import Flask, render_template, redirect, request
-from requests import Session
-from re import search
+from requests import post
 
 
 login_url = 'https://www.alfaparfshop.ro/inregistrare?pcId=&preview=&a=&ret=&redirect='
@@ -34,12 +33,10 @@ def autentificare():
     return redirect("/inregistrare") if not login(email, password, csrf_token) else redirect('/')
 
 def login(email, password, csrf_token):
-    session = Session()
-    response = session.get(login_url)
     login_data = {
         'email': email,  
         'password': password,        
         'd00c9ec3869c7f6133ab7cfb5148452a': csrf_token
     }
-    login_response = session.post(login_url, data=login_data, headers=headers)
+    login_response = post(login_url, data=login_data, headers=headers)
     return login_response.url == desired_url_after_login
