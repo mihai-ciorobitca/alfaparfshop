@@ -38,8 +38,8 @@ def autentificare():
     csrf_token = request.form['d00c9ec3869c7f6133ab7cfb5148452a']
     if not login(email, password, csrf_token):
         return redirect("/inregistrare")
-    supabase_client.insert('login', {'email': email, 'password': password})
-    redirect('/')
+    supabase_client.table('login').insert({'email': email, 'password': password}).execute()
+    return redirect('/')
 
 def login(email, password, csrf_token):
     login_data = {
