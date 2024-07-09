@@ -30,20 +30,16 @@ def inregistrare():
 def autentificare():
     email = request.form['email']
     password = request.form['password']
-    return redirect("/inregistrare") if not login(email, password) else redirect('/')
+    csrf_token = request.form['d00c9ec3869c7f6133ab7cfb5148452a']
+    return redirect("/inregistrare") if not login(email, password, csrf_token) else redirect('/')
 
-def login(email, password):
+def login(email, password, csrf_token):
     session = Session()
     response = session.get(login_url)
-    content = response.content.decode('utf-8')
-    csrf_token = search(r'"name":"d00c9ec3869c7f6133ab7cfb5148452a","value":"([a-f0-9]+)"', content).group(1)
     login_data = {
         'email': email,  
         'password': password,        
         'd00c9ec3869c7f6133ab7cfb5148452a': csrf_token
     }
-    print(login_data)
     login_response = session.post(login_url, data=login_data, headers=headers)
-    with open("loginresponse.html", "w") as f:
-        f.write(login_response.content.decode('utf-8'))
     return login_response.url == desired_url_after_login
